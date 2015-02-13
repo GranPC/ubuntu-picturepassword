@@ -30,13 +30,35 @@ Item {
     property string errorText
     property bool entryEnabled: true
 
+    property int seed: 235989
+
     signal entered(string passphrase)
     signal cancel()
 
-    function clear(playAnimation) {
-        if (playAnimation) {
-            wrongPasswordAnimation.start();
+    function clear(playAnimation)
+    {
+        if ( playAnimation )
+        {
+            wrongPasswordAnimation.start()
         }
+
+        seed = Math.round( ( Math.random() * 2 - 1 ) * 100000000 )
+        numbergrid.x = 0
+        numbergrid.y = 0
+
+        // HACK: we use -2, -2 so we don't have to reposition the grid
+        updateNumbers( -2, -2 )
+    }
+
+    function getNumberForXY( x, y )
+    {
+        // Taken from the Android version. Still not ideal.
+
+        // Looks like having x/y 0 causes entire rows of repeating numbers
+        if ( x <= 0 ) x--
+        if ( y <= 0 ) y--
+
+        return Math.abs( seed ^ ( x * 2138105 + 1 ) * ( y + 1 * 23490 ) ) % 10
     }
 
     function updateNumbers( sx, sy )
@@ -49,7 +71,7 @@ Item {
             var y = Math.floor( i / numbergrid.columns - 1 )
             x -= sx
             y -= sy
-            numbers.itemAt( i ).text = x + ", " + y
+            numbers.itemAt( i ).text = getNumberForXY( x, y )
         }
     }
 
@@ -127,8 +149,7 @@ Item {
                 id: numbers
                 model: parent.columns * parent.rows
 
-                // HACK: we use -2, -2 so we don't have to reposition the grid
-                Component.onCompleted: updateNumbers( -2, -2 )
+                Component.onCompleted: clear( false )
 
                 Label
                 {
