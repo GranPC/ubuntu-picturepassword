@@ -82,6 +82,7 @@ Item {
         y: shakeContainer.height + units.gu( 5 )
 
         color: 'yellow'
+        clip: true
 
         // The actual thing that takes care of dragging
         MouseArea
@@ -126,6 +127,9 @@ Item {
                 id: numbers
                 model: parent.columns * parent.rows
 
+                // HACK: we use -2, -2 so we don't have to reposition the grid
+                Component.onCompleted: updateNumbers( -2, -2 )
+
                 Label
                 {
                     width: picture.width / ( parent.columns - 2 )
@@ -138,28 +142,6 @@ Item {
 
                     horizontalAlignment: Text.AlignHCenter
                     verticalAlignment: Text.AlignVCenter
-
-                    // TODO: these are just for debugging! get rid of them!
-                    Rectangle
-                    {
-                        x: 0
-                        y: 0
-                        width: parent.width
-                        height: parent.height
-
-                        color: Qt.rgba( 1, 1, 1, 0.2 )
-                    }
-
-                    Rectangle
-                    {
-                        x: -1
-                        y: -1
-                        width: parent.width + 2
-                        height: parent.height + 2
-                        color: "blue"
-
-                        z: -5
-                    }
                 }
             }
         }
