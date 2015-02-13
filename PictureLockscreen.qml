@@ -45,8 +45,8 @@ Item {
         if ( sy < 0 ) sy++
         for ( var i = 0; i < numbers.model; i++ )
         {
-            var x = i % numbergrid.columns
-            var y = Math.floor( i / numbergrid.columns )
+            var x = i % numbergrid.columns - 1
+            var y = Math.floor( i / numbergrid.columns - 1 )
             x -= sx
             y -= sy
             numbers.itemAt( i ).text = x + ", " + y
@@ -98,8 +98,8 @@ Item {
                 var nw = numbers.itemAt( 0 ).width
                 var nh = numbers.itemAt( 0 ).height
 
-                numbergrid.x = dx % nw
-                numbergrid.y = dy % nh
+                numbergrid.x = dx % nw - nw
+                numbergrid.y = dy % nh - nh
 
                 infoField.text = dx + "," + dy + " || " + Math.floor( dx / nh ) + "," + Math.floor( dy / nh )
 
@@ -119,17 +119,17 @@ Item {
         {
             id: numbergrid
 
-            columns: 6
-            rows: 10
+            columns: 6 + 2
+            rows: 10 + 2
             Repeater
             {
                 id: numbers
-                model: ( parent.columns ) * ( parent.rows )
+                model: parent.columns * parent.rows
 
                 Label
                 {
-                    width: picture.width / parent.columns
-                    height: picture.height / parent.rows
+                    width: picture.width / ( parent.columns - 2 )
+                    height: picture.height / ( parent.rows - 2 )
 
                     fontSize: "large"
                     color: "white"
