@@ -1,0 +1,9 @@
+--- Shell_.qml	2015-02-15 16:41:51.000000000 +0100
++++ Shell.qml	2015-02-15 02:35:13.000000000 +0100
+@@ -362,6 +362,7 @@
+         onEntered: LightDM.Greeter.respond(passphrase);
+         onCancel: greeter.show()
+         onEmergencyCall: startLockedApp("dialer-app")
++        onAuthenticated: greeter.login()
+ 
+         onShownChanged: if (shown) greeter.lockedApp = ""

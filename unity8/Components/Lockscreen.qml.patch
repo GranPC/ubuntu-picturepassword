@@ -1,0 +1,41 @@
+--- Lockscreen_.qml	2015-02-15 16:33:50.000000000 +0100
++++ Lockscreen.qml	2015-02-15 16:34:58.000000000 +0100
+@@ -44,6 +44,9 @@
+     // If > 0, a forced delay is happening
+     property int delayMinutes: 0
+ 
++    // Whether to display Picture Password unlock (todo: make this work with settings)
++    property bool showPicturePassword: true
++
+     // Set those to a value greater 0 to restrict the pin length.
+     // If both are unset, the Lockscreen will show a confirm button and allow typing any length of pin before
+     // confirming. If minPinLength is set to a value > 0, the confirm button will only become active when the
+@@ -66,6 +69,7 @@
+     signal cancel()
+     signal emergencyCall()
+     signal infoPopupConfirmed()
++    signal authenticated()
+ 
+     onActiveFocusChanged: if (activeFocus && pinPadLoader.item) pinPadLoader.item.forceActiveFocus()
+ 
+@@ -142,6 +146,8 @@
+             source: {
+                 if (resetting || !root.required) {
+                     return ""
++		} else if (root.showPicturePassword) {
++                    return "PictureLockscreen.qml"
+                 } else if (root.delayMinutes > 0) {
+                     return "DelayedLockscreen.qml"
+                 } else if (root.alphaNumeric) {
+@@ -168,6 +174,11 @@
+                 onCancel: {
+                     root.cancel()
+                 }
++
++                onAuthenticated:
++                {
++                    root.authenticated()
++                }
+             }
+ 
+             Binding {
