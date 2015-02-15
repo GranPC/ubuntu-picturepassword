@@ -31,9 +31,15 @@ Item {
     property bool entryEnabled: true
 
     property int seed: 235989
+    property int threshold: units.gu( 4 )
+
+    property int unlocknumber: 0
+    property int unlockx: 0
+    property int unlocky: 0
 
     signal entered(string passphrase)
     signal cancel()
+    signal authenticated()
 
     function clear(playAnimation)
     {
@@ -75,6 +81,28 @@ Item {
         }
     }
 
+    function isNumberAtXY( number, x, y, maxdist )
+    {
+        var maxdistsqr = maxdist * maxdist
+
+        for ( var i = 0; i < numbers.model; i++ )
+        {
+            var item = numbers.itemAt( i )
+            if ( item.text == number.toString() )
+            {
+                var dx = item.x + item.width / 2 + numbergrid.x - x
+                var dy = item.y + item.height / 2 + numbergrid.y - y
+
+                var distsqr = dx * dx + dy * dy
+                if ( distsqr <= maxdistsqr )
+                {
+                    return true
+                }
+            }
+        }
+
+        return false
+    }
 
     Column
     {
@@ -100,8 +128,8 @@ Item {
         id: picture
 
         width: root.width
-        height: root.height - root.y - shakeContainer.height - units.gu( 7 )
-        y: shakeContainer.height + units.gu( 5 )
+        height: root.height - root.y - shakeContainer.height - units.gu( 4 )
+        y: shakeContainer.height + units.gu( 4 )
 
         color: 'yellow'
         clip: true
@@ -113,6 +141,19 @@ Item {
 
             property variant lastPos
             onPressed: { lastPos = Qt.point( mouseX, mouseY ) }
+            onReleased:
+            {
+                if ( isNumberAtXY( unlocknumber, unlockx, unlocky, threshold ) )
+                {
+                    // infoField.text = "you did it!!!"
+                    root.authenticated()
+                }
+                else
+                {
+                    clear( true )
+                }
+            }
+
             onPositionChanged:
             {
                 var dx = mouseX - lastPos.x
