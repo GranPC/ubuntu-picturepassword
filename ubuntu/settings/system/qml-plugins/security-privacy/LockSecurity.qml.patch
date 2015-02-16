@@ -1,0 +1,110 @@
+--- security-privacy-original/LockSecurity.qml	2015-02-15 18:34:18.000000000 +0100
++++ security-privacy/LockSecurity.qml	2015-02-16 14:23:56.000000000 +0100
+@@ -84,6 +84,13 @@
+         dialog.newMethod = indexToMethod(unlockMethod.selectedIndex)
+     }
+ 
++    function openPicturePasswordDialog( type )
++    {
++        dialog = PopupUtils.open( dialogComponent, page )
++        dialog.oldMethod = securityPrivacy.securityType
++        dialog.newMethod = type
++    }
++
+     RegExpValidator {
+         id: passcodeValidator
+         regExp: /\d{4}/
+@@ -137,6 +144,11 @@
+                         return i18n.tr("Switch to passcode")
+                     case UbuntuSecurityPrivacyPanel.Passphrase:
+                         return i18n.tr("Switch to passphrase")
++
++                    case 1337:
++                        return i18n.tr( "Enable Picture Password" )
++                    case 1338:
++                        return i18n.tr( "Disable Picture Password" )
+                     }
+                 }
+             }
+@@ -178,7 +190,9 @@
+                              UbuntuSecurityPrivacyPanel.Passcode
+                 onTextChanged: {
+                     if (changeSecurityDialog.newMethod ===
+-                            UbuntuSecurityPrivacyPanel.Swipe)
++                            UbuntuSecurityPrivacyPanel.Swipe ||
++                        changeSecurityDialog.newMethod === 1337 ||
++                        changeSecurityDialog.newMethod === 1338 )
+                         confirmButton.enabled = text.length > 0
+                 }
+                 Component.onCompleted: forceActiveFocus()
+@@ -360,6 +374,8 @@
+                         if (changeSecurityDialog.newMethod ===
+                                 UbuntuSecurityPrivacyPanel.Swipe)
+                             return i18n.tr("Unset")
++                        else if ( changeSecurityDialog.newMethod === 1337 )
++                            return i18n.tr( "Next" )
+                         else if (changeSecurityDialog.oldMethod ===
+                                 changeSecurityDialog.newMethod)
+                             return i18n.tr("Change")
+@@ -396,6 +412,27 @@
+                             return
+                         }
+ 
++                        if ( changeSecurityDialog.newMethod === 1337 )
++                        {
++                            // Hack! We "verify" that the password is correct by setting it back and forth
++                            var error = securityPrivacy.setSecurity( currentInput.text, "0000", changeSecurityDialog.oldMethod )
++                            if ( error === "" )
++                            {
++                                securityPrivacy.setSecurity( "0000", currentInput.text, changeSecurityDialog.oldMethod )
++
++                                pageStack.push( Qt.resolvedUrl( "PicturePasswordSetupIntro.qml" ) )
++                                PopupUtils.close( changeSecurityDialog )
++                            }
++                            else
++                            {
++                                incorrect.text = error
++                                currentInput.forceActiveFocus()
++                                currentInput.selectAll()
++                                changeSecurityDialog.enabled = true
++                            }
++                            return
++                        }
++
+                         var errorText = securityPrivacy.setSecurity(
+                             currentInput.visible ? currentInput.text : "",
+                             newInput.text,
+@@ -453,6 +490,28 @@
+             value: methodToIndex(securityPrivacy.securityType)
+         }
+ 
++        ListItem.Standard
++        {
++            text: i18n.tr( "Picture Password" )
++            control: CheckBox
++            {
++                id: picturePasswordCheck
++                enabled: true
++
++                property bool serverChecked: false
++                onServerCheckedChanged: checked = serverChecked
++                Component.onCompleted: checked = serverChecked
++                onClicked:
++                {
++                    // Don't let people toggle us without authenticating first!
++                    checked = serverChecked
++
++                    openPicturePasswordDialog( checked ? 1338 : 1337 )
++                }
++            }
++        }
++
++
+         ListItem.SingleControl {
+ 
+             id: changeControl
+@@ -477,3 +536,4 @@
+         }
+     }
+ }
++
