@@ -14,6 +14,8 @@ Rectangle
     property int unlockx: 0
     property int unlocky: 0
 
+    property string background
+
     signal success()
     signal failure()
 
@@ -75,7 +77,7 @@ Rectangle
         }
     }
 
-    Rectangle
+    Image
     {
         id: picture
 
@@ -83,7 +85,8 @@ Rectangle
         height: root.height
         y: 0
 
-        color: 'yellow'
+        source: root.background
+        fillMode: Image.PreserveAspectCrop
         clip: true
 
         // The actual thing that takes care of dragging
