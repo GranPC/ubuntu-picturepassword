@@ -27,15 +27,6 @@ Item {
     height: parent.height
 
     property string infoText
-    property string errorText
-    property bool entryEnabled: true
-
-    property int seed: 235989
-    property int threshold: units.gu( 4 )
-
-    property int unlocknumber: 0
-    property int unlockx: 0
-    property int unlocky: 0
 
     signal entered(string passphrase)
     signal cancel()
@@ -47,61 +38,6 @@ Item {
         {
             wrongPasswordAnimation.start()
         }
-
-        seed = Math.round( ( Math.random() * 2 - 1 ) * 100000000 )
-        numbergrid.x = 0
-        numbergrid.y = 0
-
-        // HACK: we use -2, -2 so we don't have to reposition the grid
-        updateNumbers( -2, -2 )
-    }
-
-    function getNumberForXY( x, y )
-    {
-        // Taken from the Android version. Still not ideal.
-
-        // Looks like having x/y 0 causes entire rows of repeating numbers
-        if ( x <= 0 ) x--
-        if ( y <= 0 ) y--
-
-        return Math.abs( seed ^ ( x * 2138105 + 1 ) * ( y + 1 * 23490 ) ) % 10
-    }
-
-    function updateNumbers( sx, sy )
-    {
-        if ( sx < 0 ) sx++
-        if ( sy < 0 ) sy++
-        for ( var i = 0; i < numbers.model; i++ )
-        {
-            var x = i % numbergrid.columns - 1
-            var y = Math.floor( i / numbergrid.columns - 1 )
-            x -= sx
-            y -= sy
-            numbers.itemAt( i ).text = getNumberForXY( x, y )
-        }
-    }
-
-    function isNumberAtXY( number, x, y, maxdist )
-    {
-        var maxdistsqr = maxdist * maxdist
-
-        for ( var i = 0; i < numbers.model; i++ )
-        {
-            var item = numbers.itemAt( i )
-            if ( item.text == number.toString() )
-            {
-                var dx = item.x + item.width / 2 + numbergrid.x - x
-                var dy = item.y + item.height / 2 + numbergrid.y - y
-
-                var distsqr = dx * dx + dy * dy
-                if ( distsqr <= maxdistsqr )
-                {
-                    return true
-                }
-            }
-        }
-
-        return false
     }
 
     Column
@@ -122,91 +58,19 @@ Item {
         }
     }
 
-    // TODO: Move this to its own component thingy!!!
-    Rectangle
+    PicturePassword
     {
         id: picture
-
         width: root.width
         height: root.height - root.y - shakeContainer.height - units.gu( 4 )
         y: shakeContainer.height + units.gu( 4 )
 
-        color: 'yellow'
-        clip: true
+        unlocknumber: 3
+        unlockx: 0
+        unlocky: 0
 
-        // The actual thing that takes care of dragging
-        MouseArea
-        {
-            anchors.fill: parent
-
-            property variant lastPos
-            onPressed: { lastPos = Qt.point( mouseX, mouseY ) }
-            onReleased:
-            {
-                if ( isNumberAtXY( unlocknumber, unlockx, unlocky, threshold ) )
-                {
-                    // infoField.text = "you did it!!!"
-                    root.authenticated()
-                }
-                else
-                {
-                    clear( true )
-                }
-            }
-
-            onPositionChanged:
-            {
-                var dx = mouseX - lastPos.x
-                var dy = mouseY - lastPos.y
-
-                var nw = numbers.itemAt( 0 ).width
-                var nh = numbers.itemAt( 0 ).height
-
-                numbergrid.x = dx % nw - nw
-                numbergrid.y = dy % nh - nh
-
-                infoField.text = dx + "," + dy + " || " + Math.floor( dx / nh ) + "," + Math.floor( dy / nh )
-
-                try
-                {
-                    updateNumbers( Math.floor( dx / nw ), Math.floor( dy / nh ) )
-                }
-                catch ( e )
-                {
-                    // I really need to figure out how to get proper debug spew from this
-                    infoField.text = e.toString()
-                }
-            }
-        }
-
-        Grid
-        {
-            id: numbergrid
-
-            columns: 6 + 2
-            rows: 10 + 2
-            Repeater
-            {
-                id: numbers
-                model: parent.columns * parent.rows
-
-                Component.onCompleted: clear( false )
-
-                Label
-                {
-                    width: picture.width / ( parent.columns - 2 )
-                    height: picture.height / ( parent.rows - 2 )
-
-                    fontSize: "large"
-                    color: "white"
-                    style: Text.Outline
-                    text: index
-
-                    horizontalAlignment: Text.AlignHCenter
-                    verticalAlignment: Text.AlignVCenter
-                }
-            }
-        }
+        onSuccess: root.authenticated()
+        onFailure: clear( true )
     }
 
     WrongPasswordAnimation {
