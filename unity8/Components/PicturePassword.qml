@@ -27,6 +27,17 @@ Rectangle
 
         // HACK: we use -2, -2 so we don't have to reposition the grid
         updateNumbers( -2, -2 )
+
+        if ( playAnimation )
+        {
+            for ( var i = 0; i < numbers.model; i++ )
+            {
+                var item = numbers.itemAt( i )
+                var anim = item.resources[ 0 ]
+                item.scale = 0
+                anim.start()
+            }
+        }
     }
 
     function getNumberForXY( x, y )
@@ -135,10 +146,11 @@ Rectangle
                 id: numbers
                 model: parent.columns * parent.rows
 
-                Component.onCompleted: reset( false )
+                Component.onCompleted: reset( true )
 
                 Label
                 {
+                    id: num
                     width: picture.width / ( parent.columns - 2 )
                     height: picture.height / ( parent.rows - 2 )
 
@@ -149,6 +161,31 @@ Rectangle
 
                     horizontalAlignment: Text.AlignHCenter
                     verticalAlignment: Text.AlignVCenter
+
+                    resources:
+                    [
+                        SequentialAnimation
+                        {
+                            PauseAnimation
+                            {
+                                duration: index * 8
+                            }
+
+                            PropertyAnimation
+                            {
+                                id: "scaleAnimation"
+                                property: "scale"
+                                from: 0.0
+                                to: 1.0
+                                duration: 180
+                                target: num
+
+                                easing.type: Easing.OutExpo
+                            }
+
+                            running: true
+                        }
+                    ]
                 }
             }
         }
