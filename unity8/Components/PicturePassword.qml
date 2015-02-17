@@ -19,7 +19,36 @@ Rectangle
     signal success()
     signal failure()
 
-    function reset( playAnimation )
+    property bool busy: true
+
+    Timer
+    {
+        id: resetTimer
+        interval: numbergrid.columns * numbergrid.rows * 8 + 180
+        onTriggered: { fadeNewNumbersIn() }
+    }
+    
+    function reset( fadeout )
+    {
+        if ( fadeout )
+        {
+            for ( var i = 0; i < numbers.model; i++ )
+            {
+                var item = numbers.itemAt( i )
+                var anim = item.resources[ 1 ]
+                item.resources[ 0 ].stop()
+                anim.start()
+            }
+            
+            resetTimer.start()
+        }
+        else
+        {
+            fadeNewNumbersIn()
+        }
+    }
+                        
+    function fadeNewNumbersIn()
     {
         seed = Math.round( ( Math.random() * 2 - 1 ) * 100000000 )
         numbergrid.x = 0
@@ -28,15 +57,12 @@ Rectangle
         // HACK: we use -2, -2 so we don't have to reposition the grid
         updateNumbers( -2, -2 )
 
-        if ( playAnimation )
+        for ( var i = 0; i < numbers.model; i++ )
         {
-            for ( var i = 0; i < numbers.model; i++ )
-            {
-                var item = numbers.itemAt( i )
-                var anim = item.resources[ 0 ]
-                item.scale = 0
-                anim.start()
-            }
+            var item = numbers.itemAt( i )
+            var anim = item.resources[ 0 ]
+            item.resources[ 1 ].stop()
+            anim.start()
         }
     }
 
@@ -105,6 +131,7 @@ Rectangle
         {
             anchors.fill: parent
 
+            enabled: !root.busy
             property variant lastPos
             onPressed: { lastPos = Qt.point( mouseX, mouseY ) }
             onReleased:
@@ -146,7 +173,7 @@ Rectangle
                 id: numbers
                 model: parent.columns * parent.rows
 
-                Component.onCompleted: reset( true )
+                Component.onCompleted: reset( false )
 
                 Label
                 {
@@ -162,6 +189,8 @@ Rectangle
                     horizontalAlignment: Text.AlignHCenter
                     verticalAlignment: Text.AlignVCenter
 
+                    scale: 0
+
                     resources:
                     [
                         SequentialAnimation
@@ -173,10 +202,8 @@ Rectangle
 
                             PropertyAnimation
                             {
-                                id: "scaleAnimation"
                                 property: "scale"
-                                from: 0.0
-                                to: 1.0
+                                to: 1.35
                                 duration: 180
                                 target: num
 
@@ -184,6 +211,45 @@ Rectangle
                             }
 
                             running: true
+                            onRunningChanged:
+                            {
+                                if ( running )
+                                {
+                                    root.busy = true
+                                }
+                                else
+                                {
+                                    root.busy = false
+                                }
+                            }
+                        },
+
+                        SequentialAnimation
+                        {
+                            PauseAnimation
+                            {
+                                duration: index * 8
+                            }
+
+                            PropertyAnimation
+                            {
+                                property: "scale"
+                                to: 0.0
+                                duration: 180
+                                target: num
+
+                                easing.type: Easing.InExpo
+                            }
+
+                            running: true
+                            
+                            onRunningChanged:
+                            {
+                                if ( running )
+                                {
+                                    root.busy = true
+                                }
+                            }
                         }
                     ]
                 }
