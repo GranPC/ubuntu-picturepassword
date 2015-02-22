@@ -16,8 +16,22 @@ Rectangle
 
     property string background
 
+    property bool setup: false
+    property int setupNumber: -1
+    property int setupX: 0
+    property int setupY: 0
+
+    property int columns: 6
+    property int rows: 10
+
+    property int offsetX
+    property int offsetY
+
+    onSetupNumberChanged: { startSetup( setupNumber ) }
+
     signal success()
     signal failure()
+    signal positionUpdated( var x, var y )
 
     property bool busy: true
 
@@ -28,6 +42,42 @@ Rectangle
         onTriggered: { fadeNewNumbersIn() }
     }
     
+    function requireNumber( number )
+    {
+        while( true )
+        {
+            for ( var x = 0; x < root.columns; x++ )
+            {
+                for ( var y = 0; y < root.rows; y++ )
+                {
+                    if ( getNumberForXY( x, y ) == number )
+                    {
+                        return [ x, y ]
+                    }
+                }
+            }
+
+            seed = Math.round( ( Math.random() * 2 - 1 ) * 100000000 )
+        }
+    } 
+
+    function startSetup()
+    {
+        var number = root.setupNumber
+
+        setup = true
+        var pos = requireNumber( number )
+        setupX = pos[ 0 ]
+        setupY = pos[ 1 ]
+
+        updateNumbers( -2, -2 )
+    }
+
+    function endSetup()
+    {
+        setup = false
+    }
+
     function reset( fadeout )
     {
         if ( fadeout )
@@ -50,9 +100,17 @@ Rectangle
                         
     function fadeNewNumbersIn()
     {
-        seed = Math.round( ( Math.random() * 2 - 1 ) * 100000000 )
+        if ( !setup )
+            seed = Math.round( ( Math.random() * 2 - 1 ) * 100000000 )
+
         numbergrid.x = 0
         numbergrid.y = 0
+        
+        dragAgent.x = 0
+        dragAgent.y = 0
+
+        dragAgent.gridX = 0
+        dragAgent.gridY = 0
 
         // HACK: we use -2, -2 so we don't have to reposition the grid
         updateNumbers( -2, -2 )
@@ -80,14 +138,17 @@ Rectangle
     function isNumberAtXY( number, x, y, maxdist )
     {
         var maxdistsqr = maxdist * maxdist
+        var unlockpos = convertToViewSpace( unlockx, unlocky )
 
         for ( var i = 0; i < numbers.model; i++ )
         {
             var item = numbers.itemAt( i )
             if ( item.text == number.toString() )
             {
-                var dx = item.x + item.width / 2 + numbergrid.x - x
-                var dy = item.y + item.height / 2 + numbergrid.y - y
+                var pos = item.mapToItem( picture, item.width / 2, item.height / 2 )
+
+                var dx = pos.x - unlockpos[ 0 ]
+                var dy = pos.y - unlockpos[ 1 ]
 
                 var distsqr = dx * dx + dy * dy
                 if ( distsqr <= maxdistsqr )
@@ -104,6 +165,10 @@ Rectangle
     {
         if ( sx < 0 ) sx++
         if ( sy < 0 ) sy++
+
+        offsetX = sx
+        offsetY = sy
+
         for ( var i = 0; i < numbers.model; i++ )
         {
             var x = i % numbergrid.columns - 1
@@ -111,9 +176,61 @@ Rectangle
             x -= sx
             y -= sy
             numbers.itemAt( i ).text = getNumberForXY( x, y )
+
+            var setupOpacity = 0.33
+            if ( x == setupX && y == setupY ) setupOpacity = 1
+            numbers.itemAt( i ).opacity = setup ? setupOpacity : 1
         }
     }
+    
+    function convertToImageSpace( x, y )
+    {
+        var paintedWidth = picture.paintedWidth / 2 + picture.width / 2
+        var paintedHeight = picture.paintedHeight / 2 + picture.height / 2
+        
+        var scale = picture.paintedWidth / picture.sourceSize.width
 
+        if ( picture.paintedHeight == picture.height )
+        {
+            scale = picture.paintedHeight / picture.sourceSize.height
+        }
+        
+        var centerX = x - picture.width / 2
+        var centerY = y - picture.height / 2
+        
+        centerX /= scale
+        centerY /= scale
+        
+        x = centerX + picture.sourceSize.width / 2
+        y = centerY + picture.sourceSize.height / 2
+
+        return [x, y]
+    }
+
+    function convertToViewSpace( x, y )
+    {
+        var paintedWidth = picture.paintedWidth / 2 + picture.width / 2
+        var paintedHeight = picture.paintedHeight / 2 + picture.height / 2
+
+        var scale = picture.paintedWidth / picture.sourceSize.width
+
+        if ( picture.paintedHeight == picture.height )
+        {
+            scale = picture.paintedHeight / picture.sourceSize.height
+        }
+
+        var centerX = x - picture.sourceSize.width / 2
+        var centerY = y - picture.sourceSize.height / 2
+
+        centerX *= scale
+        centerY *= scale
+
+        x = centerX + picture.width / 2
+        y = centerY + picture.height / 2
+
+        return [x, y]
+    }
+                                                            
     Image
     {
         id: picture
@@ -129,21 +246,47 @@ Rectangle
         // The actual thing that takes care of dragging
         MouseArea
         {
+            id: dragAgent
             anchors.fill: parent
 
-            enabled: !root.busy
             property variant lastPos
+            
+            property int gridX
+            property int gridY
+
             onPressed: { lastPos = Qt.point( mouseX, mouseY ) }
             onReleased:
             {
-                if ( isNumberAtXY( unlocknumber, unlockx, unlocky, threshold ) )
+                if ( root.setup )
                 {
-                    root.success()
+                    var num = numbers.itemAt( ( setupY + offsetY + 1 ) * numbergrid.columns + setupX + offsetX + 1 )
+                    if ( !num )
+                    {
+                        // Number was out of bounds: user scrolled too far!
+                        reset( true )
+                    }
+                    else
+                    {
+                        var numpos = num.mapToItem( picture, num.width / 2, num.height / 2 )
+
+                        // Since the image isn't sized exactly the same (cropped, etc) in the lock screen and in the wizard,
+                        // we need to convert these positions to image positions
+
+                        var converted = convertToImageSpace( numpos.x, numpos.y )
+                        root.positionUpdated( converted[ 0 ], converted[ 1 ] )
+                    }
                 }
                 else
                 {
-                    reset( true )
-                    root.failure()
+                    if ( isNumberAtXY( unlocknumber, unlockx, unlocky, threshold ) )
+                    {
+                        root.success()
+                    }
+                    else
+                    {
+                        reset( true )
+                        root.failure()
+                    }
                 }
             }
 
@@ -152,13 +295,19 @@ Rectangle
                 var dx = mouseX - lastPos.x
                 var dy = mouseY - lastPos.y
 
+                gridX += dx
+                gridY += dy
+
+                lastPos.x = mouseX
+                lastPos.y = mouseY
+
                 var nw = numbers.itemAt( 0 ).width
                 var nh = numbers.itemAt( 0 ).height
 
-                numbergrid.x = dx % nw - nw
-                numbergrid.y = dy % nh - nh
+                numbergrid.x = gridX % nw - nw
+                numbergrid.y = gridY % nh - nh
 
-                updateNumbers( Math.floor( dx / nw ), Math.floor( dy / nh ) )
+                updateNumbers( Math.floor( gridX / nw ), Math.floor( gridY / nh ) )
             }
         }
 
@@ -166,8 +315,9 @@ Rectangle
         {
             id: numbergrid
 
-            columns: 6 + 2
-            rows: 10 + 2
+            columns: root.columns + 2
+            rows: root.rows + 2
+
             Repeater
             {
                 id: numbers
@@ -203,7 +353,7 @@ Rectangle
                             PropertyAnimation
                             {
                                 property: "scale"
-                                to: 1.35
+                                to: 1.45
                                 duration: 180
                                 target: num
 

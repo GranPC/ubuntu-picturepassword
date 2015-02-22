@@ -38,7 +38,7 @@ ItemPage
                 if ( transfer.state === ContentTransfer.Charged && transfer.items.length > 0 )
                 {
                     var img = transfer.items[ 0 ].url
-                    pageStack.push( Qt.resolvedUrl( "PicturePasswordSetupMain.qml" ), { img: img } )
+                    pageStack.push( Qt.resolvedUrl( "PicturePasswordSetupNumber.qml" ), { img: img } )
                 }
             }
         }

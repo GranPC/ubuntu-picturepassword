@@ -8,9 +8,12 @@ import "../../../../../unity8/Components" // this is absolutely horrible
 ItemPage
 {
     id: page
-    title: i18n.tr( "Picture Password" )
+    title: i18n.tr( "Select a position" )
 
     property string img
+    property int number
+    property var numberx
+    property var numbery
 
     Rectangle
     {
@@ -23,6 +26,8 @@ ItemPage
 
         PicturePassword
         {
+            id: picture
+            
             anchors.left: parent.left
             anchors.right: parent.right
             anchors.top: parent.top
@@ -31,6 +36,25 @@ ItemPage
             anchors.bottomMargin: units.gu( 1.5 )
 
             background: img
+            setupNumber: number
+
+            onPositionUpdated:
+            {
+                page.numberx = x
+                page.numbery = y
+                
+                console.warn( x, y )
+            }
+            
+            onSuccess:
+            {
+                // Write settings
+            }
+
+            onFailure:
+            {
+                page.title = i18n.tr( "Try again" )
+            }
         }
 
         Label
@@ -51,6 +75,7 @@ ItemPage
 
         Label
         {
+            id: navNext
             text: i18n.tr( "%1  〉".arg( i18n.tr( "Continue" ) ) )
             anchors.bottom: parent.bottom
             anchors.right: parent.right
@@ -60,7 +85,19 @@ ItemPage
             MouseArea
             {
                 anchors.fill: parent
-                onClicked: pageStack.push( Qt.resolvedUrl( "PicturePasswordSetupMain.qml" ) )
+                onClicked:
+                {
+                    page.title = i18n.tr( "Confirm your position" )
+
+                    picture.endSetup()
+                    picture.reset( true )
+
+                    picture.unlocknumber = number
+                    picture.unlockx = numberx
+                    picture.unlocky = numbery
+
+                    navNext.enabled = false
+                }
             }
         }
     }
